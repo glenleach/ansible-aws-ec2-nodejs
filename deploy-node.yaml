@@ -72,14 +72,36 @@
         recurse: yes
         owner: nodejs-user
         group: nodejs-user
-    - name: Start the application as nodejs-user
-      shell: npm start &
-      args:
-        chdir: /home/nodejs-user/app
+    - name: Create systemd service for Node.js app
+      copy:
+        dest: /etc/systemd/system/nodejs-app.service
+        content: |
+          [Unit]
+          Description=Node.js App
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=nodejs-user
+          WorkingDirectory=/home/nodejs-user/app
+          ExecStart=/usr/bin/npm start
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
       become: true
-      become_user: nodejs-user
-      async: 1000
-      poll: 0
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+      become: true
+
+    - name: Start and enable Node.js app service
+      systemd:
+        name: nodejs-app
+        state: started
+        enabled: yes
+      become: true
     - name: Ensure app is running
       shell: ps aux | grep node
       register: app_status
