@@ -1,55 +1,81 @@
 ---
-- name: Install node and npm
-  # replace with your host IP address
+- name: Create group and user for node app
   hosts: aws_ec2
+  become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  pre_tasks:
+    - name: Ensure python3 is installed
+      raw: sudo apt-get update && sudo apt-get install -y python3
+      register: install_python
+      changed_when: install_python.rc == 0
+      failed_when: install_python.rc != 0 and install_python.rc != 100
+  tasks:
+    - name: Create group for nodejs-user
+      group:
+        name: nodejs-user
+    - name: Create linux user for node app
+      user:
+        name: nodejs-user
+        comment: nodejs-user Admin
+        group: nodejs-user
+        groups: sudo
+
+- name: Prepare EC2 instance for Node.js app
+  hosts: aws_ec2
+  become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
   tasks:
     - name: Update apt repo and cache
-      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+        cache_valid_time: 3600
     - name: Install nodejs and npm
       apt:
         pkg:
           - nodejs
           - npm
-
-
-- name: Create new linux user for node app
-  # replace with your host IP address
-  hosts: aws_ec2
-  tasks:
-    - name: Create linux user
-      user:
-      # replace with your username
-        name: ec2-user
-        comment: Node User
-        group: admin
-
+    - name: Ensure app directory exists
+      file:
+        path: /home/nodejs-user/app
+        state: directory
+        owner: nodejs-user
+        group: nodejs-user
+        mode: '0755'
 
 - name: Deploy nodejs app
-  # replace with your host IP address
   hosts: aws_ec2
-  become: True
-  # replace with your username
-  become_user: Username
+  become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
   tasks:
     - name: Unpack the nodejs file
       unarchive:
-        # replace with your folder location
-        src: /mnt/d/ansible/nodejs-app/nodejs-app-1.0.0.tgz
-        # replace with your folder location
-        dest: /home/ec2-user/app-1.0.0.tgz
+        src: nodejs-app-1.0.0.tgz
+        dest: /home/nodejs-user/app
+        owner: nodejs-user
+        group: nodejs-user
+        extra_opts: [--strip-components=1]
     - name: Install dependencies
       npm:
-        # replace with your folder location
-        path: home/username/package
+        path: /home/nodejs-user/app
+      environment:
+        HOME: /home/nodejs-user
+    - name: Ensure app files are owned by nodejs-user
+      file:
+        path: /home/nodejs-user/app
+        state: directory
+        recurse: yes
+        owner: nodejs-user
+        group: nodejs-user
     - name: Start the application
-      command:
-        # replace with your folder location
-        chdir: home/username/package/app
-        cmd: node server
+      shell: sudo -u nodejs-user bash -c 'cd /home/nodejs-user/app && npm start &'
       async: 1000
       poll: 0
     - name: Ensure app is running
       shell: ps aux | grep node
       register: app_status
-    - debug: msg={{app_status.stdout_lines}}
-
+    - debug:
+        msg: "{{ app_status.stdout_lines }}"
