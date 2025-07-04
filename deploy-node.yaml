@@ -20,6 +20,8 @@
         comment: nodejs-user Admin
         group: nodejs-user
         groups: sudo
+    - name: Reset SSH connection to apply new user/group changes
+      ansible.builtin.meta: reset_connection
 
 - name: Prepare EC2 instance for Node.js app
   hosts: aws_ec2
@@ -70,8 +72,12 @@
         recurse: yes
         owner: nodejs-user
         group: nodejs-user
-    - name: Start the application
-      shell: sudo -u nodejs-user bash -c 'cd /home/nodejs-user/app && npm start &'
+    - name: Start the application as nodejs-user
+      shell: npm start &
+      args:
+        chdir: /home/nodejs-user/app
+      become: true
+      become_user: nodejs-user
       async: 1000
       poll: 0
     - name: Ensure app is running
