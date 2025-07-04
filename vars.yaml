@@ -1,0 +1,4 @@
+---
+aws_region: eu-west-2           # Update to your preferred AWS region
+instance_type: t2.micro         # Free tier eligible instance type
+key_name: Ansible.pem     # Update to your AWS EC2 key pair name

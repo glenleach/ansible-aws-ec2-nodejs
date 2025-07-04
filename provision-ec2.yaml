@@ -1,0 +1,88 @@
+---
+- name: Provision Ubuntu EC2 Instance and Security Group for Node.js
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - vars.yaml
+  vars:
+    nodejs_ports:
+      - 22    # SSH
+      - 3000  # Node.js app
+    security_group_name: nodejs
+    security_group_description: Security group for Node.js app
+    hosts_file: hosts
+    ubuntu_owner_id: '099720109477'  # Canonical
+    ubuntu_name_search: 'ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*'
+
+  tasks:
+    - name: Find latest Ubuntu 22.04 LTS AMI
+      amazon.aws.ec2_ami_info:
+        region: "{{ aws_region }}"
+        owners: ["{{ ubuntu_owner_id }}"]
+        filters:
+          name: "{{ ubuntu_name_search }}"
+          architecture: x86_64
+          root-device-type: ebs
+          virtualization-type: hvm
+          state: available
+      register: ubuntu_ami
+
+    - name: Set latest Ubuntu AMI ID fact
+      set_fact:
+        ami_id: "{{ (ubuntu_ami.images | sort(attribute='creation_date', reverse=true))[0].image_id }}"
+
+    - name: Check if security group already exists
+      amazon.aws.ec2_group_info:
+        region: "{{ aws_region }}"
+        filters:
+          group-name: "{{ security_group_name }}"
+      register: sg_info
+
+    - name: Create security group for Node.js (if not exists)
+      amazon.aws.ec2_group:
+        name: "{{ security_group_name }}"
+        description: "{{ security_group_description }}"
+        region: "{{ aws_region }}"
+        rules:
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 3000
+            to_port: 3000
+            cidr_ip: 0.0.0.0/0
+        rules_egress:
+          - proto: all
+            cidr_ip: 0.0.0.0/0
+      when: sg_info.security_groups | length == 0
+      register: nodejs_sg
+
+    - name: Launch Ubuntu EC2 instance (Free Tier)
+      amazon.aws.ec2:
+        key_name: "{{ key_name }}"
+        instance_type: "{{ instance_type }}"
+        image: "{{ ami_id }}"
+        wait: yes
+        group: "{{ security_group_name }}"
+        region: "{{ aws_region }}"
+        count: 1
+        instance_tags:
+          Name: nodejs-server
+      register: ec2
+
+    - name: Wait for SSH to come up
+      ansible.builtin.wait_for:
+        host: "{{ ec2.instances[0].public_ip }}"
+        port: 22
+        delay: 10
+        timeout: 320
+        state: started
+
+    - name: Update hosts file with new EC2 public IP
+      ansible.builtin.lineinfile:
+        path: "{{ hosts_file }}"
+        line: "nodejs-server ansible_host={{ ec2.instances[0].public_ip }} ansible_user=ubuntu"
+        create: yes
+        state: present
