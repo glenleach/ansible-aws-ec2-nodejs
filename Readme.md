@@ -1,7 +1,9 @@
-# DevOps Bootcamp Demo Project: Ansible AWS EC2 Node.js
+# Demo App – DevOps Bootcamp Training (TechWorld with Nana)
 
 ## Overview
 This project demonstrates how to use Ansible to provision an AWS EC2 instance and deploy a Node.js application. It is designed as a hands-on exercise for DevOps Bootcamp participants to learn infrastructure automation, configuration management, and application deployment using industry-standard tools.
+
+**Note:** Additional coding and files have been added to this project to improve automation and resilience beyond the base bootcamp material.
 
 ## Learning Objectives
 - Understand the basics of Ansible and its role in DevOps
