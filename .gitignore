@@ -1,7 +1,7 @@
 .qodo
 nexus.sh
-deploy-note-part1.yaml
-deploy-note-part2.yaml
-deploy-note-part3.yaml
-mp-playbook.yaml
-nexus.sh
+deploy-nexus.yaml
+deploy-node-part1.yaml
+deploy-node-part2.yaml
+deploy-node-part3.yaml
+my-playbook.yaml
