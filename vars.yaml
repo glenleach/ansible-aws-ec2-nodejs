@@ -1,4 +1,8 @@
----
-aws_region: eu-west-2           # Update to your preferred AWS region
-instance_type: t2.micro         # Free tier eligible instance type
-key_name: Ansible.pem     # Update to your AWS EC2 key pair name
+ansible_ssh_private_key_file_path: /mnt/c/Users/glenl/Ansible.pem
+ansible_ssh_user: ubuntu
+ansible_python_interpreter_path: /usr/bin/python3.9
+instance_type: t2.micro         # <-- Set your instance type here
+aws_region: eu-west-2           # <-- Set your AWS region here
+security_group_name: nodejs     # <-- Set your security group name here
+key_name: Ansible               # <-- Set your AWS key pair name here (just the name, not the .pem part)
+nodejs_app_version: 1.0.0       # <-- Set your Node.js app version here
