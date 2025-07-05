@@ -1,4 +1,5 @@
-ansible_ssh_private_key_file_path: /mnt/c/Users/glenl/Ansible.pem
+
+ansible_ssh_private_key_file_path: /mnt/c/Users/glenl/Ansible.pem   # <-- Set your Path to the SSH private key for connecting to remote servers
 ansible_ssh_user: ubuntu
 ansible_python_interpreter_path: /usr/bin/python3.9
 instance_type: t2.micro         # <-- Set your instance type here
