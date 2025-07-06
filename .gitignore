@@ -4,5 +4,5 @@ my-playbook/
 deploy-node-parts/
 nodejs-app-1.0.0.tgz:Zone.Identifier
 deploy-docker-ec2-user/
-bootcamp-java-mysql-project
-Run-Docker-Apllications
+bootcamp-java-mysql-project/
+Run-Docker-Applications/
