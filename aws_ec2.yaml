@@ -1,0 +1,18 @@
+plugin: aws_ec2
+regions:
+  - eu-west-2
+filters:
+  instance-state-name: running
+  tag:Name: nodejs
+keyed_groups:
+  - key: tags.Name
+    prefix: tag
+    separator: "_"
+  - key: placement.availability_zone
+    prefix: az
+    separator: "_"
+  - key: tags
+    prefix: tag
+    separator: "_"
+compose:
+  ansible_host: public_ip_address

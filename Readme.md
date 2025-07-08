@@ -23,13 +23,31 @@ This project demonstrates how to use Ansible to provision an AWS EC2 instance an
 ansible-aws-ec2-nodejs/
 ├── .gitignore           # Git ignore rules
 ├── ansible.cfg          # Ansible configuration file
+├── aws_ec2.yaml         # Dynamic inventory configuration for AWS EC2
 ├── deploy-node.yaml     # Ansible playbook to deploy Node.js app
 ├── provision-ec2.yaml   # Ansible playbook to provision EC2 and security group
 ├── vars.yaml            # Variables for provisioning (region, key, instance type)
-├── hosts                # Ansible inventory file
+├── hosts                # (Legacy) Ansible static inventory file (no longer used)
 ├── nodejs-app-1.0.0.tgz # Node.js application tarball
 └── Readme.md            # Project documentation
 ```
+
+## Dynamic Inventory Setup
+This project now uses Ansible's dynamic inventory feature to automatically discover EC2 instances in AWS. The `aws_ec2.yaml` file configures the inventory plugin to:
+- Target the `eu-west-2` region
+- Only include running instances
+- Filter for instances with the Name tag set to `nodejs`
+
+**ansible.cfg** is configured to use `aws_ec2.yaml` as the default inventory, so you do not need to specify `-i` on the command line.
+
+**Python Interpreter:**
+The global Python interpreter is set in `ansible.cfg`:
+```
+ansible_python_interpreter = /usr/bin/python3.9
+```
+This ensures Ansible uses Python 3.9 on all managed hosts.
+
+**Note:** The static `hosts` file is no longer required or updated. All host discovery is handled dynamically.
 
 ## Setup Instructions
 1. **Clone the repository:**
@@ -50,28 +68,29 @@ ansible-aws-ec2-nodejs/
 
 4. **Edit variables for provisioning:**
    - Open `vars.yaml` and update the following variables to match your AWS setup:
-     - `aws_region`: Your AWS region (e.g., us-east-1)
+     - `aws_region`: Your AWS region (e.g., eu-west-2)
      - `instance_type`: EC2 instance type (e.g., t2.micro for free tier)
      - `key_name`: Your AWS EC2 key pair name
 
 5. **Provision an AWS EC2 instance and security group:**
-   - Run the following command to create a security group, launch an Ubuntu EC2 instance, and update the hosts file automatically:
+   - Run the following command to create a security group and launch an Ubuntu EC2 instance:
      ```bash
      ansible-playbook provision-ec2.yaml
      ```
+   - The playbook no longer updates the static hosts file. All host discovery is now dynamic.
 
 6. **Verify Node.js application tarball:**
    - Ensure `nodejs-app-1.0.0.tgz` is present in the project directory. This file will be copied to the EC2 instance during deployment.
 
 ## Usage
 ### 1. Provision an EC2 Instance and Security Group
-Run the Ansible playbook to create a security group, launch an EC2 instance, and update the hosts file:
+Run the Ansible playbook to create a security group and launch an EC2 instance:
 ```bash
 ansible-playbook provision-ec2.yaml
 ```
 
 ### 2. Deploy the Node.js Application
-After the instance is running and the hosts file is updated, deploy the app:
+After the instance is running, deploy the app using dynamic inventory:
 ```bash
 ansible-playbook deploy-node.yaml
 ```
@@ -86,11 +105,10 @@ ansible-playbook deploy-node.yaml
 - Prints out the status of the application to verify it is running successfully.
 
 ### 3. Access the Application
-- Find the public IP of your EC2 instance and open it in your browser:
+- Find the public IP of your EC2 instance (the dynamic inventory will automatically target it) and open it in your browser:
   ```
   http://<EC2_PUBLIC_IP>:3000
   ```
-
 
 ## Additional Resources
 - [Ansible Documentation](https://docs.ansible.com/)

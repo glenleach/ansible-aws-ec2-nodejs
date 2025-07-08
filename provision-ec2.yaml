@@ -80,9 +80,4 @@
         timeout: 320
         state: started
 
-    - name: Update hosts file with new EC2 public IP
-      ansible.builtin.lineinfile:
-        path: "{{ hosts_file }}"
-        line: "nodejs-server ansible_host={{ ec2.instances[0].public_ip }} ansible_user=ubuntu"
-        create: yes
-        state: present
+    
