@@ -5,7 +5,11 @@
   gather_facts: no
   vars_files:
     - vars.yaml
+  collections:
+    - amazon.aws
+    - ansible.builtin
   vars:
+    ansible_python_interpreter: /home/glenl/ansible-venv/bin/python
     nodejs_ports:
       - 22    # SSH
       - 3000  # Node.js app
@@ -60,21 +64,21 @@
       register: nodejs_sg
 
     - name: Launch Ubuntu EC2 instance (Free Tier)
-      amazon.aws.ec2:
+      amazon.aws.ec2_instance:
         key_name: "{{ key_name }}"
         instance_type: "{{ instance_type }}"
-        image: "{{ ami_id }}"
+        image_id: "{{ ami_id }}"
         wait: yes
-        group: "{{ security_group_name }}"
+        security_group: "{{ security_group_name }}"
         region: "{{ aws_region }}"
         count: 1
-        instance_tags:
+        tags:
           Name: nodejs-server
       register: ec2
 
     - name: Wait for SSH to come up
       ansible.builtin.wait_for:
-        host: "{{ ec2.instances[0].public_ip }}"
+        host: "{{ ec2.instances[0].public_ip_address }}"
         port: 22
         delay: 10
         timeout: 320

@@ -4,6 +4,8 @@
   become: true
   vars:
     ansible_python_interpreter: /usr/bin/python3
+  vars_files:
+    - vars.yaml
   pre_tasks:
     - name: Ensure python3 is installed
       raw: sudo apt-get update && sudo apt-get install -y python3
@@ -28,17 +30,20 @@
   become: true
   vars:
     ansible_python_interpreter: /usr/bin/python3
+  vars_files:
+    - vars.yaml
   tasks:
     - name: Update apt repo and cache
       apt:
         update_cache: yes
         force_apt_get: yes
         cache_valid_time: 3600
-    - name: Install nodejs and npm
+    - name: Add NodeSource APT repository for Node.js 18.x
+      shell: curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    - name: Install nodejs (includes npm)
       apt:
-        pkg:
-          - nodejs
-          - npm
+        name: nodejs
+        state: present
     - name: Ensure app directory exists
       file:
         path: /home/nodejs-user/app
@@ -52,19 +57,40 @@
   become: true
   vars:
     ansible_python_interpreter: /usr/bin/python3
+  vars_files:
+    - vars.yaml
   tasks:
+    - name: Remove old app directory before deployment
+      file:
+        path: /home/nodejs-user/app
+        state: absent
+      become: true
+
+    - name: Recreate app directory for deployment
+      file:
+        path: /home/nodejs-user/app
+        state: directory
+        owner: nodejs-user
+        group: nodejs-user
+        mode: '0755'
+      become: true
+
     - name: Unpack the nodejs file
       unarchive:
-        src: nodejs-app-1.0.0.tgz
+        src: "nodejs-app-{{ nodejs_app_version }}.tgz"
         dest: /home/nodejs-user/app
         owner: nodejs-user
         group: nodejs-user
         extra_opts: [--strip-components=1]
-    - name: Install dependencies
-      npm:
-        path: /home/nodejs-user/app
+      become: true
+
+    - name: Install dependencies as root
+      shell: npm install
+      args:
+        chdir: /home/nodejs-user/app
       environment:
         HOME: /home/nodejs-user
+
     - name: Ensure app files are owned by nodejs-user
       file:
         path: /home/nodejs-user/app
@@ -72,6 +98,14 @@
         recurse: yes
         owner: nodejs-user
         group: nodejs-user
+
+    - name: Restart Node.js app service
+      systemd:
+        name: nodejs-app
+        state: restarted
+        enabled: yes
+      become: true
+
     - name: Create systemd service for Node.js app
       copy:
         dest: /etc/systemd/system/nodejs-app.service
@@ -102,8 +136,26 @@
         state: started
         enabled: yes
       become: true
+
     - name: Ensure app is running
       shell: ps aux | grep node
       register: app_status
+
     - debug:
         msg: "{{ app_status.stdout_lines }}"
+
+    - name: Update hosts file with all EC2 public DNS entries
+      ansible.builtin.blockinfile:
+        path: "{{ hosts_file | default('hosts') }}"
+        block: |
+          [aws_ec2]
+          {% for host in groups['aws_ec2'] %}
+          {{ hostvars[host]['ansible_host'] | default(host) }} ansible_python_interpreter={{ ansible_python_interpreter_path }}
+          {% endfor %}
+
+          [aws_ec2:vars]
+          ansible_ssh_private_key_file={{ ansible_ssh_private_key_file_path }}
+          ansible_user={{ ansible_ssh_user }}
+        create: yes
+        state: present
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
